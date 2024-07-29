@@ -58,6 +58,12 @@ export class AssetManager {
       import.meta.url
     ).href;
     textureLoader.load(dummy, (texture) => this.textures.set("dummy", texture));
+
+    const floorBlack = new URL("/textures/texture_01.png", import.meta.url)
+      .href;
+    textureLoader.load(floorBlack, (texture) =>
+      this.textures.set("floor-black", texture)
+    );
   }
 
   private loadAnimations(fbxLoader: FBXLoader) {

@@ -15,6 +15,8 @@ export class GameState {
 
   private animatedCharacter: AnimatedCharacter;
 
+  private gridSize = 10;
+
   constructor(private assetManager: AssetManager) {
     this.setupCamera();
     this.renderPipeline = new RenderPipeline(this.scene, this.camera);
@@ -31,6 +33,8 @@ export class GameState {
     this.scene.add(this.animatedCharacter.object);
     this.animatedCharacter.playAnimation("idle");
 
+    this.setupGrid();
+
     // Start game
     this.update();
   }
@@ -45,7 +49,7 @@ export class GameState {
     const ambientLight = new THREE.AmbientLight(undefined, 2);
     this.scene.add(ambientLight);
 
-    const directLight = new THREE.DirectionalLight(undefined, 4);
+    const directLight = new THREE.DirectionalLight(undefined, Math.PI);
     directLight.position.copy(new THREE.Vector3(0.75, 1, 0.75).normalize());
     this.scene.add(directLight);
   }
@@ -63,6 +67,22 @@ export class GameState {
     }
 
     return new AnimatedCharacter(object, mixer, actions);
+  }
+
+  private setupGrid() {
+    // Default cube material
+    const cubeMat = new THREE.MeshBasicMaterial({
+      map: this.assetManager.textures.get("floor-black"),
+    });
+
+    // Create a grid of cubes
+    for (let x = 0; x < this.gridSize; x++) {
+      for (let z = 0; z < this.gridSize; z++) {
+        const cube = new THREE.Mesh(new THREE.BoxGeometry(), cubeMat);
+        cube.position.set(x, -0.5, z);
+        this.scene.add(cube);
+      }
+    }
   }
 
   private update = () => {
