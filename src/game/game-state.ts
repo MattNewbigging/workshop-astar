@@ -17,11 +17,9 @@ export class GameState {
 
   constructor(private assetManager: AssetManager) {
     this.setupCamera();
-
     this.renderPipeline = new RenderPipeline(this.scene, this.camera);
 
     this.setupLights();
-    this.setupObjects();
 
     this.controls = new OrbitControls(this.camera, this.renderPipeline.canvas);
     this.controls.enableDamping = true;
@@ -44,23 +42,17 @@ export class GameState {
   }
 
   private setupLights() {
-    const ambientLight = new THREE.AmbientLight(undefined, 0.25);
+    const ambientLight = new THREE.AmbientLight(undefined, 2);
     this.scene.add(ambientLight);
 
-    const directLight = new THREE.DirectionalLight(undefined, 2);
+    const directLight = new THREE.DirectionalLight(undefined, 4);
     directLight.position.copy(new THREE.Vector3(0.75, 1, 0.75).normalize());
     this.scene.add(directLight);
   }
 
-  private setupObjects() {
-    const box = this.assetManager.models.get("box");
-    this.scene.add(box);
-  }
-
   private setupAnimatedCharacter(): AnimatedCharacter {
-    const object = this.assetManager.models.get("bandit");
-    object.position.z = -0.5;
-    this.assetManager.applyModelTexture(object, "bandit");
+    const object = this.assetManager.models.get("dummy");
+    this.assetManager.applyModelTexture(object, "dummy");
 
     const mixer = new THREE.AnimationMixer(object);
     const actions = new Map<string, THREE.AnimationAction>();
