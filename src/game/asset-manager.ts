@@ -88,6 +88,13 @@ export class AssetManager {
       texture.colorSpace = THREE.SRGBColorSpace;
       this.textures.set("floor-green", texture);
     });
+
+    const floorRed = new URL("/textures/texture_02_red.png", import.meta.url)
+      .href;
+    textureLoader.load(floorRed, (texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      this.textures.set("floor-red", texture);
+    });
   }
 
   private loadAnimations(fbxLoader: FBXLoader) {

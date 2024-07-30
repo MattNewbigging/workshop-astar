@@ -68,9 +68,7 @@ export class AStar {
         }
 
         // Set costs
-        neighbour.costFromStart = currentNode.costFromStart + 1; // 1 is the distance between grid cells
-        neighbour.costToEnd = this.nodeDistanceSq(neighbour, end);
-        neighbour.costTotal = neighbour.costFromStart + neighbour.costToEnd;
+        this.calculateCosts(neighbour, currentNode, end);
         neighbour.parent = currentNode;
 
         // If this node is already being considered at a cheaper cost (from a different parent), skip it
@@ -85,6 +83,9 @@ export class AStar {
         openList.push(neighbour);
       }
     }
+
+    // If we reached this point, no path could be found
+    return undefined;
   }
 
   getNeighbours(grid: GridCell[][], pathNode: PathNode): PathNode[] {
@@ -123,11 +124,10 @@ export class AStar {
     return a.posX === b.posX && a.posZ === b.posZ;
   }
 
-  calculateCosts(node: PathNode, start: PathNode, end: PathNode) {
-    // Simple distance check
-    node.costFromStart = this.nodeDistanceSq(node, start);
-    node.costToEnd = this.nodeDistanceSq(node, end);
-    node.costTotal = node.costFromStart + node.costToEnd;
+  calculateCosts(current: PathNode, previous: PathNode, end: PathNode) {
+    current.costFromStart = previous.costFromStart + 1;
+    current.costToEnd = this.nodeDistanceSq(current, end);
+    current.costTotal = current.costFromStart + current.costToEnd;
   }
 
   nodeDistanceSq(a: PathNode, b: PathNode) {

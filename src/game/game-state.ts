@@ -31,6 +31,7 @@ export class GameState {
 
   private floorBlackMaterial: THREE.MeshLambertMaterial;
   private floorGreenMaterial: THREE.MeshLambertMaterial;
+  private floorRedMaterial: THREE.MeshLambertMaterial;
   private obstacleMaterial: THREE.MeshLambertMaterial;
   private gridSize = 10;
   private grid: GridCell[][] = [];
@@ -47,6 +48,7 @@ export class GameState {
 
     this.controls = new OrbitControls(this.camera, this.renderPipeline.canvas);
     this.controls.enableDamping = true;
+    this.controls.enablePan = false;
     this.controls.target.set(this.gridSize / 2, 0, this.gridSize / 2);
 
     this.scene.background = new THREE.Color("#1680AF");
@@ -60,6 +62,9 @@ export class GameState {
     });
     this.floorGreenMaterial = new THREE.MeshLambertMaterial({
       map: this.assetManager.textures.get("floor-green"),
+    });
+    this.floorRedMaterial = new THREE.MeshLambertMaterial({
+      map: this.assetManager.textures.get("floor-red"),
     });
 
     const obstacleTexture = this.assetManager.textures.get("obstacle-orange");
@@ -112,7 +117,7 @@ export class GameState {
   private setupCamera() {
     this.camera.fov = 75;
     this.camera.far = 500;
-    this.camera.position.set(this.gridSize + 5, 10, this.gridSize + 5);
+    this.camera.position.set(this.gridSize, 10, this.gridSize);
   }
 
   private setupLights() {
@@ -291,10 +296,15 @@ export class GameState {
       const aStar = new AStar();
       const path = aStar.getPath(fromCell, toCell, this.grid);
 
-      // Change the path floor tiles to green
-      path?.forEach((cell) =>
-        this.changeFloorMaterial(cell, this.floorGreenMaterial)
-      );
+      if (path) {
+        // Change the path floor tiles to green
+        path?.forEach((cell) =>
+          this.changeFloorMaterial(cell, this.floorGreenMaterial)
+        );
+      } else {
+        // Change the destination floor tile to red
+        this.changeFloorMaterial(toCell, this.floorRedMaterial);
+      }
     }
   };
 
