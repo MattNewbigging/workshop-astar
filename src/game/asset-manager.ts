@@ -62,18 +62,31 @@ export class AssetManager {
       this.textures.set("dummy", texture);
     });
 
-    const floorBlack = new URL("/textures/texture_01.png", import.meta.url)
-      .href;
+    const floorBlack = new URL(
+      "/textures/texture_01_black.png",
+      import.meta.url
+    ).href;
     textureLoader.load(floorBlack, (texture) => {
       texture.colorSpace = THREE.SRGBColorSpace;
       this.textures.set("floor-black", texture);
     });
 
-    const obstacleOrange = new URL("/textures/texture_03.png", import.meta.url)
-      .href;
+    const obstacleOrange = new URL(
+      "/textures/texture_03_orange.png",
+      import.meta.url
+    ).href;
     textureLoader.load(obstacleOrange, (texture) => {
       texture.colorSpace = THREE.SRGBColorSpace;
       this.textures.set("obstacle-orange", texture);
+    });
+
+    const floorGreen = new URL(
+      "/textures/texture_01_green.png",
+      import.meta.url
+    ).href;
+    textureLoader.load(floorGreen, (texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      this.textures.set("floor-green", texture);
     });
   }
 

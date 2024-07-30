@@ -5,6 +5,7 @@ import { RenderPipeline } from "./render-pipeline";
 import { AssetManager } from "./asset-manager";
 import { Agent } from "./agent";
 import { makeAutoObservable, observable } from "mobx";
+import { AStar } from "./astar";
 
 export interface GridCell {
   posX: number;
@@ -255,6 +256,8 @@ export class GameState {
       if (intersections.length) {
         this.renderPipeline.clearOutlines();
         this.renderPipeline.outlineObject(floorCell.object);
+
+        this.agent.destinationCell = floorCell;
       }
     }
   };
@@ -264,6 +267,15 @@ export class GameState {
     window.removeEventListener("mousemove", this.setDestinationMouseMove);
     window.removeEventListener("click", this.setDestinationClick);
     this.renderPipeline.clearOutlines();
+
+    // Find a path to the destination
+    const fromCell = this.agent.currentCell;
+    const toCell = this.agent.destinationCell;
+    if (fromCell && toCell) {
+      const aStar = new AStar();
+      const path = aStar.getPath(fromCell, toCell, this.grid);
+      console.log("got path", path);
+    }
   };
 
   private gridCellsAreEqual(a: GridCell, b: GridCell) {

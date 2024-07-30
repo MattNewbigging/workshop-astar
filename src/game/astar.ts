@@ -1,62 +1,137 @@
-interface Node {
-  rowIndex: number; // z position
-  colIndex: number; // x position
-}
+import { GridCell } from "./game-state";
 
-interface PathNode extends Node {
+// We create a search node object for each grid cell
+interface PathNode extends GridCell {
   parent?: PathNode;
-  costToHere: number;
+  costFromStart: number;
   costToEnd: number;
   costTotal: number;
 }
 
 export class AStar {
-  grid: Node[][] = [];
+  getPath(fromCell: GridCell, toCell: GridCell, grid: GridCell[][]) {
+    const openList: PathNode[] = [];
+    const closedList: PathNode[] = [];
 
-  // Should be inferred from the scene, not the other way around
-  constructor(gridSize = 10) {
-    // Create the grid of nodes
-    for (let row = 0; row < gridSize; row++) {
-      this.grid[row] = [];
+    // Create path nodes from the given cells
+    const start: PathNode = {
+      ...fromCell,
+      costFromStart: 0,
+      costToEnd: 0,
+      costTotal: 0,
+    };
+    const end: PathNode = {
+      ...toCell,
+      costFromStart: 0,
+      costToEnd: 0,
+      costTotal: 0,
+    };
 
-      for (let col = 0; col < gridSize; col++) {
-        this.grid[row][col] = { rowIndex: row, colIndex: col };
+    // We begin with the start node
+    openList.push(start);
+
+    // So long as there are nodes to explore...
+    while (openList.length) {
+      // Sort the open list so that the cheapest node is first
+      openList.sort((a, b) => a.costTotal - b.costTotal);
+
+      const currentNode = openList[0];
+
+      // Is this the end node?
+      if (this.nodesAreEqual(currentNode, end)) {
+        // Backtrack closed list
+        let current = currentNode;
+        const route: PathNode[] = [];
+        while (current.parent) {
+          route.push(current);
+          current = current.parent;
+        }
+        route.reverse();
+
+        return route as GridCell[];
+      }
+
+      // Move the current node from open list to closed list
+      openList.splice(0, 1);
+      closedList.push(currentNode);
+
+      // Now get the neighbours of that node
+      for (const neighbour of this.getNeighbours(grid, currentNode)) {
+        // If this node is an obstacle or already explored, ignore it
+        if (
+          neighbour.obstacle ||
+          closedList.some((node) => this.nodesAreEqual(node, neighbour))
+        ) {
+          continue;
+        }
+
+        // Set costs
+        neighbour.costFromStart = currentNode.costFromStart + 1; // 1 is the distance between grid cells
+        neighbour.costToEnd = this.nodeDistanceSq(neighbour, end);
+        neighbour.costTotal = neighbour.costFromStart + neighbour.costToEnd;
+        neighbour.parent = currentNode;
+
+        // If this node is already being considered at a cheaper cost (from a different parent), skip it
+        const onOpenList = openList.find((node) =>
+          this.nodesAreEqual(node, neighbour)
+        );
+        if (onOpenList && onOpenList.costFromStart < neighbour.costFromStart) {
+          continue;
+        }
+
+        // Add the node to the open list
+        openList.push(neighbour);
       }
     }
   }
 
-  getNeighbours(grid: Node[][], node: Node) {
-    // No diagonals - only cardinal directions
-    const row = node.rowIndex;
-    const col = node.colIndex;
+  getNeighbours(grid: GridCell[][], pathNode: PathNode): PathNode[] {
+    const row = pathNode.posZ;
+    const col = pathNode.posX;
 
-    // North is in row above at same column
-    const north = grid[row - 1][col];
+    let above, below, left, right;
 
-    // South is in row below at same column
-    const south = grid[row + 1][col];
+    if (row > 0) {
+      above = grid[row - 1][col];
+    }
+    if (row < grid.length - 2) {
+      below = grid[row + 1][col];
+    }
 
-    // West is in same row at prev column
-    const west = grid[row][col - 1];
+    if (col > 0) {
+      left = grid[row][col - 1];
+    }
+    if (col < grid[0].length - 2) {
+      right = grid[row][col + 1];
+    }
 
-    // East is in same row at next column
-    const east = grid[row][col + 1];
-
-    const neighbours = [north, south, west, east].filter(
-      (node) => node !== null
+    const neighbourCells = [above, below, left, right].filter(
+      (cell) => cell !== undefined
     );
 
-    return neighbours;
+    return neighbourCells.map((cell) => ({
+      ...cell,
+      costFromStart: 0,
+      costToEnd: 0,
+      costTotal: 0,
+    }));
   }
 
-  nodesAreEqual(a: Node, b: Node): boolean {
-    return a.rowIndex === b.rowIndex && a.colIndex === b.colIndex;
+  nodesAreEqual(a: PathNode, b: PathNode) {
+    return a.posX === b.posX && a.posZ === b.posZ;
   }
 
-  getClosestNode(x: number, z: number) {
-    const nearestX = Math.round(x);
-    const nearestZ = Math.round(z);
+  calculateCosts(node: PathNode, start: PathNode, end: PathNode) {
+    // Simple distance check
+    node.costFromStart = this.nodeDistanceSq(node, start);
+    node.costToEnd = this.nodeDistanceSq(node, end);
+    node.costTotal = node.costFromStart + node.costToEnd;
+  }
 
-    return this.grid[z][x];
+  nodeDistanceSq(a: PathNode, b: PathNode) {
+    const dx = Math.abs(b.posX - a.posX);
+    const dz = Math.abs(b.posZ - a.posZ);
+
+    return dx * dx + dz * dz;
   }
 }

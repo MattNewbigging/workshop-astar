@@ -5,6 +5,7 @@ import { GridCell } from "./game-state";
 export class Agent {
   model: THREE.Object3D;
   currentCell?: GridCell;
+  destinationCell?: GridCell;
 
   private mixer: THREE.AnimationMixer;
   private animations = new Map<string, THREE.AnimationAction>();
