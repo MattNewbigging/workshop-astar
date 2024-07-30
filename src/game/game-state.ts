@@ -8,8 +8,7 @@ import { makeAutoObservable, observable } from "mobx";
 import { AStar } from "./astar";
 
 export interface GridCell {
-  posX: number;
-  posZ: number;
+  position: THREE.Vector3;
   obstacle: boolean;
   object: THREE.Object3D;
 }
@@ -53,9 +52,6 @@ export class GameState {
 
     this.scene.background = new THREE.Color("#1680AF");
 
-    // Agent
-    this.agent = new Agent(this.assetManager);
-
     // Grid
     this.floorBlackMaterial = new THREE.MeshLambertMaterial({
       map: this.assetManager.textures.get("floor-black"),
@@ -78,6 +74,9 @@ export class GameState {
     // Starting grid
     this.buildGrid(this.gridSize);
     this.displayGrid(this.grid);
+
+    // Agent
+    this.agent = new Agent(this.assetManager, this.floorBlackMaterial);
 
     // Start game
     this.update();
@@ -169,8 +168,7 @@ export class GameState {
     object.position.set(x, -0.5, z); // offset y so that top of box is at 0
 
     return {
-      posX: x,
-      posZ: z,
+      position: new THREE.Vector3(x, 0, z),
       obstacle: false,
       object,
     };
@@ -185,8 +183,7 @@ export class GameState {
     object.position.set(x, 0.5, z); // offset y so bottom matches floors
 
     return {
-      posX: x,
-      posZ: z,
+      position: new THREE.Vector3(x, 0, z),
       obstacle: true,
       object,
     };
@@ -236,7 +233,7 @@ export class GameState {
         this.renderPipeline.outlineObject(floorCell.object);
 
         // Place agent at the center of this grid cell
-        this.agent.model.position.set(floorCell.posX, 0, floorCell.posZ);
+        this.agent.model.position.copy(floorCell.position);
         this.agent.currentCell = floorCell;
 
         break;
@@ -266,7 +263,7 @@ export class GameState {
     for (const floorCell of this.floorCells) {
       // Ignore the floor cell the agent is on
       const currentCell = this.agent.currentCell;
-      if (currentCell && this.gridCellsAreEqual(currentCell, floorCell)) {
+      if (currentCell && gridCellsAreEqual(currentCell, floorCell)) {
         continue;
       }
 
@@ -292,15 +289,19 @@ export class GameState {
     // Find a path to the destination
     const fromCell = this.agent.currentCell;
     const toCell = this.agent.destinationCell;
+
+    console.log("fromCell", fromCell?.position);
+
     if (fromCell && toCell) {
       const aStar = new AStar();
       const path = aStar.getPath(fromCell, toCell, this.grid);
-
       if (path) {
         // Change the path floor tiles to green
-        path?.forEach((cell) =>
+        path.forEach((cell) =>
           this.changeFloorMaterial(cell, this.floorGreenMaterial)
         );
+        // Set the agent off on the path
+        this.agent.setPath(path);
       } else {
         // Change the destination floor tile to red
         this.changeFloorMaterial(toCell, this.floorRedMaterial);
@@ -311,8 +312,8 @@ export class GameState {
   private changeFloorMaterial(cell: GridCell, material: THREE.Material) {
     (cell.object as THREE.Mesh).material = material;
   }
+}
 
-  private gridCellsAreEqual(a: GridCell, b: GridCell) {
-    return a.posX === b.posX && a.posZ === b.posZ;
-  }
+export function gridCellsAreEqual(a: GridCell, b: GridCell) {
+  return a.position.equals(b.position);
 }

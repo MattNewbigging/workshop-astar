@@ -1,4 +1,4 @@
-import { GridCell } from "./game-state";
+import { GridCell, gridCellsAreEqual } from "./game-state";
 
 // We create a search node object for each grid cell
 interface PathNode extends GridCell {
@@ -38,7 +38,7 @@ export class AStar {
       const currentNode = openList[0];
 
       // Is this the end node?
-      if (this.nodesAreEqual(currentNode, end)) {
+      if (gridCellsAreEqual(currentNode, end)) {
         // Backtrack closed list
         let current = currentNode;
         const route: PathNode[] = [];
@@ -62,7 +62,7 @@ export class AStar {
         // If this node is an obstacle or already explored, ignore it
         if (
           neighbour.obstacle ||
-          closedList.some((node) => this.nodesAreEqual(node, neighbour))
+          closedList.some((node) => gridCellsAreEqual(node, neighbour))
         ) {
           continue;
         }
@@ -73,7 +73,7 @@ export class AStar {
 
         // If this node is already being considered at a cheaper cost (from a different parent), skip it
         const onOpenList = openList.find((node) =>
-          this.nodesAreEqual(node, neighbour)
+          gridCellsAreEqual(node, neighbour)
         );
         if (onOpenList && onOpenList.costFromStart < neighbour.costFromStart) {
           continue;
@@ -89,8 +89,8 @@ export class AStar {
   }
 
   getNeighbours(grid: GridCell[][], pathNode: PathNode): PathNode[] {
-    const row = pathNode.posZ;
-    const col = pathNode.posX;
+    const row = pathNode.position.z;
+    const col = pathNode.position.x;
 
     let above, below, left, right;
 
@@ -120,20 +120,9 @@ export class AStar {
     }));
   }
 
-  nodesAreEqual(a: PathNode, b: PathNode) {
-    return a.posX === b.posX && a.posZ === b.posZ;
-  }
-
   calculateCosts(current: PathNode, previous: PathNode, end: PathNode) {
     current.costFromStart = previous.costFromStart + 1;
-    current.costToEnd = this.nodeDistanceSq(current, end);
+    current.costToEnd = current.position.distanceToSquared(end.position);
     current.costTotal = current.costFromStart + current.costToEnd;
-  }
-
-  nodeDistanceSq(a: PathNode, b: PathNode) {
-    const dx = Math.abs(b.posX - a.posX);
-    const dz = Math.abs(b.posZ - a.posZ);
-
-    return dx * dx + dz * dz;
   }
 }
