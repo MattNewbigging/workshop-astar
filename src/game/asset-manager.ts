@@ -61,8 +61,14 @@ export class AssetManager {
 
     const floorBlack = new URL("/textures/texture_01.png", import.meta.url)
       .href;
-    textureLoader.load(floorBlack, (texture) =>
-      this.textures.set("floor-black", texture)
+    textureLoader.load(floorBlack, (texture) => {
+      this.textures.set("floor-black", texture);
+    });
+
+    const obstacleOrange = new URL("/textures/texture_03.png", import.meta.url)
+      .href;
+    textureLoader.load(obstacleOrange, (texture) =>
+      this.textures.set("obstacle-orange", texture)
     );
   }
 

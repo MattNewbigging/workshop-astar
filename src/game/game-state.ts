@@ -4,6 +4,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { RenderPipeline } from "./render-pipeline";
 import { AnimatedCharacter } from "./animated-character";
 import { AssetManager } from "./asset-manager";
+import { GridBuilder } from "./grid-builder";
 
 export class GameState {
   private renderPipeline: RenderPipeline;
@@ -15,7 +16,8 @@ export class GameState {
 
   private animatedCharacter: AnimatedCharacter;
 
-  private gridSize = 10;
+  private mouseNdc = new THREE.Vector2();
+  private raycaster = new THREE.Raycaster();
 
   constructor(private assetManager: AssetManager) {
     this.setupCamera();
@@ -30,10 +32,13 @@ export class GameState {
     this.scene.background = new THREE.Color("#1680AF");
 
     this.animatedCharacter = this.setupAnimatedCharacter();
-    this.scene.add(this.animatedCharacter.object);
     this.animatedCharacter.playAnimation("idle");
+    //this.scene.add(this.animatedCharacter.object);
 
     this.setupGrid();
+
+    window.addEventListener("mousemove", this.onMouseMove);
+    window.addEventListener("mousedown", this.onMouseDown);
 
     // Start game
     this.update();
@@ -46,7 +51,7 @@ export class GameState {
   }
 
   private setupLights() {
-    const ambientLight = new THREE.AmbientLight(undefined, 2);
+    const ambientLight = new THREE.AmbientLight(undefined, Math.PI);
     this.scene.add(ambientLight);
 
     const directLight = new THREE.DirectionalLight(undefined, Math.PI);
@@ -70,19 +75,38 @@ export class GameState {
   }
 
   private setupGrid() {
-    // Default cube material
-    const cubeMat = new THREE.MeshBasicMaterial({
+    // Materials
+    const cubeMat = new THREE.MeshPhongMaterial({
       map: this.assetManager.textures.get("floor-black"),
     });
 
-    // Create a grid of cubes
-    for (let x = 0; x < this.gridSize; x++) {
-      for (let z = 0; z < this.gridSize; z++) {
-        const cube = new THREE.Mesh(new THREE.BoxGeometry(), cubeMat);
-        cube.position.set(x, -0.5, z);
+    const obstacleTexture = this.assetManager.textures.get("obstacle-orange");
+    obstacleTexture.wrapS = THREE.RepeatWrapping;
+    obstacleTexture.wrapT = THREE.RepeatWrapping;
+    obstacleTexture.repeat = new THREE.Vector2(1, 3);
+    const obstacleMat = new THREE.MeshPhongMaterial({
+      map: obstacleTexture,
+    });
+
+    const builder = new GridBuilder();
+
+    builder.grid.forEach((row) =>
+      row.forEach((colCell) => {
+        const { posX, posZ, obstacle } = colCell;
+
+        const height = obstacle ? 3 : 1;
+
+        const cube = new THREE.Mesh(
+          new THREE.BoxGeometry(1, height, 1),
+          obstacle ? obstacleMat : cubeMat
+        );
+
+        const posY = obstacle ? height / 2 - 1 : -0.5;
+        cube.position.set(posX, posY, posZ);
+
         this.scene.add(cube);
-      }
-    }
+      })
+    );
   }
 
   private update = () => {
@@ -95,5 +119,39 @@ export class GameState {
     this.animatedCharacter.update(dt);
 
     this.renderPipeline.render(dt);
+  };
+
+  private onMouseMove = (e: MouseEvent) => {
+    this.mouseNdc.x = (e.clientX / window.innerWidth) * 2 - 1;
+    this.mouseNdc.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+    this.raycaster.setFromCamera(this.mouseNdc, this.camera);
+
+    this.renderPipeline.clearOutlines();
+
+    const intersections = this.raycaster.intersectObjects(
+      this.scene.children,
+      true
+    );
+    if (intersections.length) {
+      const object = intersections[0].object;
+      this.renderPipeline.outlineObject(object);
+    }
+  };
+
+  private onMouseDown = (e: MouseEvent) => {
+    this.raycaster.setFromCamera(this.mouseNdc, this.camera);
+
+    const intersections = this.raycaster.intersectObjects(
+      this.scene.children,
+      false
+    );
+    if (intersections.length) {
+      const intersection = intersections[0];
+      // Need to only select the grid-node for this cube
+      const node = intersection.object.position.clone();
+      node.y = 0;
+      //
+    }
   };
 }

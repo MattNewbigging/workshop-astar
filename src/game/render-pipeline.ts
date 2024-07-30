@@ -51,7 +51,7 @@ export class RenderPipeline {
     this.effectComposer.addPass(this.outlinePass);
 
     // This corrects the output from the outline pass for srgbe encoding
-    this.effectComposer.addPass(new ShaderPass(GammaCorrectionShader));
+    //this.effectComposer.addPass(new ShaderPass(GammaCorrectionShader));
   }
 
   get canvas() {
