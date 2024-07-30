@@ -4,7 +4,17 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { RenderPipeline } from "./render-pipeline";
 import { AnimatedCharacter } from "./animated-character";
 import { AssetManager } from "./asset-manager";
-import { GridBuilder } from "./grid-builder";
+
+interface GridCell {
+  posX: number;
+  posZ: number;
+  obstacle: boolean;
+}
+
+interface Grid {
+  cells: GridCell[][];
+  objects: THREE.Object3D[];
+}
 
 export class GameState {
   private renderPipeline: RenderPipeline;
@@ -18,6 +28,11 @@ export class GameState {
 
   private mouseNdc = new THREE.Vector2();
   private raycaster = new THREE.Raycaster();
+
+  private floorMaterial: THREE.MeshPhongMaterial;
+  private obstacleMaterial: THREE.MeshPhongMaterial;
+
+  private grid: Grid;
 
   constructor(private assetManager: AssetManager) {
     this.setupCamera();
@@ -35,7 +50,22 @@ export class GameState {
     this.animatedCharacter.playAnimation("idle");
     //this.scene.add(this.animatedCharacter.object);
 
-    this.setupGrid();
+    // Grid materials
+    this.floorMaterial = new THREE.MeshPhongMaterial({
+      map: this.assetManager.textures.get("floor-black"),
+    });
+
+    const obstacleTexture = this.assetManager.textures.get("obstacle-orange");
+    obstacleTexture.wrapS = THREE.RepeatWrapping;
+    obstacleTexture.wrapT = THREE.RepeatWrapping;
+    obstacleTexture.repeat = new THREE.Vector2(1, 3);
+    this.obstacleMaterial = new THREE.MeshPhongMaterial({
+      map: obstacleTexture,
+    });
+
+    // Initial grid
+    this.grid = this.buildGrid();
+    this.displayGrid(this.grid);
 
     window.addEventListener("mousemove", this.onMouseMove);
     window.addEventListener("mousedown", this.onMouseDown);
@@ -44,10 +74,16 @@ export class GameState {
     this.update();
   }
 
+  generateGrid = () => {
+    this.disposeGrid(this.grid);
+    this.grid = this.buildGrid();
+    this.displayGrid(this.grid);
+  };
+
   private setupCamera() {
     this.camera.fov = 75;
     this.camera.far = 500;
-    this.camera.position.set(0, 1.5, 3);
+    this.camera.position.set(15, 10, 15);
   }
 
   private setupLights() {
@@ -74,6 +110,67 @@ export class GameState {
     return new AnimatedCharacter(object, mixer, actions);
   }
 
+  private buildGrid(): Grid {
+    const cells = this.buildGridCells();
+    const objects = this.getGridCellObjects(cells);
+
+    return {
+      cells,
+      objects,
+    };
+  }
+
+  private buildGridCells(gridSize = 10) {
+    // Basic grid with unit-sized cells
+    const grid: GridCell[][] = [];
+
+    for (let z = 0; z < gridSize; z++) {
+      // Init the array for this row
+      grid[z] = [];
+
+      for (let x = 0; x < gridSize; x++) {
+        // Column cell
+        const obstacle = Math.random() > 0.8;
+        grid[z][x] = { posX: x, posZ: z, obstacle };
+      }
+    }
+
+    return grid;
+  }
+
+  private getGridCellObjects(grid: GridCell[][]) {
+    // Get some boxes representing the grid of floors and obstacles
+    const objects: THREE.Object3D[] = [];
+
+    grid.forEach((row) =>
+      row.forEach((colCell) => {
+        const { posX, posZ, obstacle } = colCell;
+
+        const height = obstacle ? 3 : 1;
+
+        const cube = new THREE.Mesh(
+          new THREE.BoxGeometry(1, height, 1),
+          obstacle ? this.obstacleMaterial : this.floorMaterial
+        );
+
+        const posY = obstacle ? height / 2 - 1 : -0.5;
+        cube.position.set(posX, posY, posZ);
+
+        objects.push(cube);
+      })
+    );
+
+    return objects;
+  }
+
+  private displayGrid(grid: Grid) {
+    grid.objects.forEach((object) => this.scene.add(object));
+  }
+
+  private disposeGrid(grid: Grid) {
+    grid.objects.forEach((object) => this.scene.remove(object));
+  }
+
   private setupGrid() {
     // Materials
     const cubeMat = new THREE.MeshPhongMaterial({
@@ -88,9 +185,9 @@ export class GameState {
       map: obstacleTexture,
     });
 
-    const builder = new GridBuilder();
+    const grid = buildGrid();
 
-    builder.grid.forEach((row) =>
+    grid.forEach((row) =>
       row.forEach((colCell) => {
         const { posX, posZ, obstacle } = colCell;
 
