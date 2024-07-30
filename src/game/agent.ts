@@ -42,9 +42,9 @@ export class Agent {
 
   setPath(path: GridCell[]) {
     this.path = path;
+
     this.playAnimation("walk");
     this.setNextTargetCell();
-    console.log("set path", this.path);
   }
 
   playAnimation(name: string) {
@@ -99,6 +99,8 @@ export class Agent {
     this.direction = cellPosition.sub(this.model.position).normalize();
     const moveStep = this.direction.clone().multiplyScalar(dt * 2);
     this.model.position.add(moveStep);
+
+    // Rotate to face target...
   }
 
   private hasReachedCell(cell: GridCell) {
@@ -135,6 +137,5 @@ export class Agent {
     if (this.currentCell) {
       this.colourCellBlack(this.currentCell);
     }
-    this.path = [];
   }
 }

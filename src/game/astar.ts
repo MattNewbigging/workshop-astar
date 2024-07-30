@@ -16,12 +16,14 @@ export class AStar {
     // Create path nodes from the given cells
     const start: PathNode = {
       ...fromCell,
+      parent: undefined,
       costFromStart: 0,
       costToEnd: 0,
       costTotal: 0,
     };
     const end: PathNode = {
       ...toCell,
+      parent: undefined,
       costFromStart: 0,
       costToEnd: 0,
       costTotal: 0,
