@@ -81,7 +81,7 @@ export class AssetManager {
     });
 
     const floorGreen = new URL(
-      "/textures/texture_01_green.png",
+      "/textures/texture_02_green.png",
       import.meta.url
     ).href;
     textureLoader.load(floorGreen, (texture) => {

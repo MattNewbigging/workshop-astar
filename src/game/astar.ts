@@ -42,10 +42,12 @@ export class AStar {
         // Backtrack closed list
         let current = currentNode;
         const route: PathNode[] = [];
+
         while (current.parent) {
           route.push(current);
           current = current.parent;
         }
+
         route.reverse();
 
         return route as GridCell[];
@@ -94,14 +96,14 @@ export class AStar {
     if (row > 0) {
       above = grid[row - 1][col];
     }
-    if (row < grid.length - 2) {
+    if (row < grid.length - 1) {
       below = grid[row + 1][col];
     }
 
     if (col > 0) {
       left = grid[row][col - 1];
     }
-    if (col < grid[0].length - 2) {
+    if (col < grid[0].length - 1) {
       right = grid[row][col + 1];
     }
 

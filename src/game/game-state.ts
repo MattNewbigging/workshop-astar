@@ -29,7 +29,8 @@ export class GameState {
 
   private agent: Agent;
 
-  private floorMaterial: THREE.MeshLambertMaterial;
+  private floorBlackMaterial: THREE.MeshLambertMaterial;
+  private floorGreenMaterial: THREE.MeshLambertMaterial;
   private obstacleMaterial: THREE.MeshLambertMaterial;
   private gridSize = 10;
   private grid: GridCell[][] = [];
@@ -54,8 +55,11 @@ export class GameState {
     this.agent = new Agent(this.assetManager);
 
     // Grid
-    this.floorMaterial = new THREE.MeshLambertMaterial({
+    this.floorBlackMaterial = new THREE.MeshLambertMaterial({
       map: this.assetManager.textures.get("floor-black"),
+    });
+    this.floorGreenMaterial = new THREE.MeshLambertMaterial({
+      map: this.assetManager.textures.get("floor-green"),
     });
 
     const obstacleTexture = this.assetManager.textures.get("obstacle-orange");
@@ -94,6 +98,11 @@ export class GameState {
   };
 
   startSetDestination = () => {
+    // Remove any previous path
+    this.floorCells.forEach((cell) =>
+      this.changeFloorMaterial(cell, this.floorBlackMaterial)
+    );
+
     // Highlight floor spaces for available destinations
     window.addEventListener("mousemove", this.setDestinationMouseMove);
     // Listen for clicks
@@ -147,7 +156,10 @@ export class GameState {
   }
 
   private createFloorCell(x: number, z: number): GridCell {
-    const object = new THREE.Mesh(new THREE.BoxGeometry(), this.floorMaterial);
+    const object = new THREE.Mesh(
+      new THREE.BoxGeometry(),
+      this.floorBlackMaterial
+    );
 
     object.position.set(x, -0.5, z); // offset y so that top of box is at 0
 
@@ -228,6 +240,10 @@ export class GameState {
   };
 
   private placeAgentClick = () => {
+    if (!this.agent.currentCell) {
+      return;
+    }
+
     // Remove listeners and outlines
     window.removeEventListener("mousemove", this.placeAgentMouseMove);
     window.removeEventListener("click", this.placeAgentClick);
@@ -274,9 +290,17 @@ export class GameState {
     if (fromCell && toCell) {
       const aStar = new AStar();
       const path = aStar.getPath(fromCell, toCell, this.grid);
-      console.log("got path", path);
+
+      // Change the path floor tiles to green
+      path?.forEach((cell) =>
+        this.changeFloorMaterial(cell, this.floorGreenMaterial)
+      );
     }
   };
+
+  private changeFloorMaterial(cell: GridCell, material: THREE.Material) {
+    (cell.object as THREE.Mesh).material = material;
+  }
 
   private gridCellsAreEqual(a: GridCell, b: GridCell) {
     return a.posX === b.posX && a.posZ === b.posZ;
