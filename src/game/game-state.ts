@@ -2,8 +2,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 import { RenderPipeline } from "./render-pipeline";
-import { AnimatedCharacter } from "./animated-character";
 import { AssetManager } from "./asset-manager";
+import { Agent } from "./agent";
 
 interface GridCell {
   posX: number;
@@ -20,18 +20,19 @@ export class GameState {
   private camera = new THREE.PerspectiveCamera();
   private controls: OrbitControls;
 
-  private animatedCharacter: AnimatedCharacter;
-
   private mouseNdc = new THREE.Vector2();
   private raycaster = new THREE.Raycaster();
 
   private floorMaterial: THREE.MeshPhongMaterial;
   private obstacleMaterial: THREE.MeshPhongMaterial;
-
   private gridSize = 10;
-  private grid: GridCell[][];
+  private grid: GridCell[][] = [];
+  private floorCells: GridCell[] = [];
+
+  private agent: Agent;
 
   constructor(private assetManager: AssetManager) {
+    // Scene
     this.setupCamera();
     this.renderPipeline = new RenderPipeline(this.scene, this.camera);
 
@@ -43,11 +44,10 @@ export class GameState {
 
     this.scene.background = new THREE.Color("#1680AF");
 
-    this.animatedCharacter = this.setupAnimatedCharacter();
-    this.animatedCharacter.playAnimation("idle");
-    //this.scene.add(this.animatedCharacter.object);
+    // Agent
+    this.agent = new Agent(this.assetManager);
 
-    // Grid materials
+    // Grid
     this.floorMaterial = new THREE.MeshPhongMaterial({
       map: this.assetManager.textures.get("floor-black"),
     });
@@ -60,12 +60,9 @@ export class GameState {
       map: obstacleTexture,
     });
 
-    // Initial grid
-    this.grid = this.buildGrid(this.gridSize);
+    // Starting grid
+    this.buildGrid(this.gridSize);
     this.displayGrid(this.grid);
-
-    window.addEventListener("mousemove", this.onMouseMove);
-    window.addEventListener("mousedown", this.onMouseDown);
 
     // Start game
     this.update();
@@ -73,8 +70,22 @@ export class GameState {
 
   generateGrid = () => {
     this.disposeGrid(this.grid);
-    this.grid = this.buildGrid(this.gridSize);
+    this.buildGrid(this.gridSize);
     this.displayGrid(this.grid);
+  };
+
+  startPlacingAgent = () => {
+    // Clear up previous agent
+
+    // Add the agent model to the scene out of view
+    this.agent.model.position.set(0, 200, 0);
+    this.agent.playAnimation("idle");
+    this.scene.add(this.agent.model);
+
+    // Start intersecting the floor
+    window.addEventListener("mousemove", this.onMouseMove);
+    // Listen for clicks
+    window.addEventListener("click", this.placeAgentClick);
   };
 
   private setupCamera() {
@@ -92,24 +103,11 @@ export class GameState {
     this.scene.add(directLight);
   }
 
-  private setupAnimatedCharacter(): AnimatedCharacter {
-    const object = this.assetManager.models.get("dummy");
-    this.assetManager.applyModelTexture(object, "dummy");
-
-    const mixer = new THREE.AnimationMixer(object);
-    const actions = new Map<string, THREE.AnimationAction>();
-    const idleClip = this.assetManager.animations.get("idle");
-    if (idleClip) {
-      const idleAction = mixer.clipAction(idleClip);
-      actions.set("idle", idleAction);
-    }
-
-    return new AnimatedCharacter(object, mixer, actions);
-  }
-
-  private buildGrid(gridSize: number): GridCell[][] {
-    // Basic grid with unit-sized cells
+  private buildGrid(gridSize: number) {
     const grid: GridCell[][] = [];
+    // We only intersect against floors when placing agents and routes,
+    // So we pull out the floor cells once to avoid re-iterating the grid later
+    const floorCells: GridCell[] = [];
 
     for (let z = 0; z < gridSize; z++) {
       // Init the array for this row
@@ -119,21 +117,50 @@ export class GameState {
         // Random chance of being an obstacle
         const obstacle = Math.random() > 0.8;
 
-        // Create the 3d object to represent this cell
-        const height = obstacle ? 3 : 1;
-        const object = new THREE.Mesh(
-          new THREE.BoxGeometry(1, height, 1),
-          obstacle ? this.obstacleMaterial : this.floorMaterial
-        );
-        const y = obstacle ? height / 2 - 1 : -0.5;
-        object.position.set(x, y, z);
+        let cell: GridCell | undefined;
+        if (obstacle) {
+          cell = this.createObstacleCell(x, z);
+        } else {
+          cell = this.createFloorCell(x, z);
+          floorCells.push(cell);
+        }
 
-        // Add the cell object to the grid
-        grid[z][x] = { posX: x, posZ: z, obstacle, object };
+        grid[z][x] = cell;
       }
     }
 
-    return grid;
+    // Assign the new grid and floor cells
+    this.grid = grid;
+    this.floorCells = floorCells;
+  }
+
+  private createFloorCell(x: number, z: number): GridCell {
+    const object = new THREE.Mesh(new THREE.BoxGeometry(), this.floorMaterial);
+
+    object.position.set(x, -0.5, z); // offset y so that top of box is at 0
+
+    return {
+      posX: x,
+      posZ: z,
+      obstacle: false,
+      object,
+    };
+  }
+
+  private createObstacleCell(x: number, z: number): GridCell {
+    const object = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 3, 1),
+      this.obstacleMaterial
+    );
+
+    object.position.set(x, 0.5, z); // offset y so bottom matches floors
+
+    return {
+      posX: x,
+      posZ: z,
+      obstacle: true,
+      object,
+    };
   }
 
   private displayGrid(grid: GridCell[][]) {
@@ -153,7 +180,7 @@ export class GameState {
 
     this.controls.update();
 
-    this.animatedCharacter.update(dt);
+    this.agent?.update(dt);
 
     this.renderPipeline.render(dt);
   };
@@ -164,31 +191,27 @@ export class GameState {
 
     this.raycaster.setFromCamera(this.mouseNdc, this.camera);
 
-    this.renderPipeline.clearOutlines();
+    for (const floorCell of this.floorCells) {
+      const intersections = this.raycaster.intersectObject(
+        floorCell.object,
+        false
+      );
+      if (intersections.length) {
+        // Outline
+        this.renderPipeline.clearOutlines();
+        this.renderPipeline.outlineObject(floorCell.object);
 
-    const intersections = this.raycaster.intersectObjects(
-      this.scene.children,
-      true
-    );
-    if (intersections.length) {
-      const object = intersections[0].object;
-      this.renderPipeline.outlineObject(object);
+        // Place agent at the center of this grid cell
+        this.agent.model.position.set(floorCell.posX, 0, floorCell.posZ);
+
+        break;
+      }
     }
   };
 
-  private onMouseDown = (e: MouseEvent) => {
-    this.raycaster.setFromCamera(this.mouseNdc, this.camera);
-
-    const intersections = this.raycaster.intersectObjects(
-      this.scene.children,
-      false
-    );
-    if (intersections.length) {
-      const intersection = intersections[0];
-      // Need to only select the grid-node for this cube
-      const node = intersection.object.position.clone();
-      node.y = 0;
-      //
-    }
+  private placeAgentClick = () => {
+    // Stop moving agent with mouse
+    window.removeEventListener("mousemove", this.onMouseMove);
+    this.renderPipeline.clearOutlines();
   };
 }

@@ -48,6 +48,7 @@ export class RenderPipeline {
     this.outlinePass.edgeThickness = 0.25;
     this.outlinePass.edgeGlow = 0;
     this.outlinePass.visibleEdgeColor.set("#ffffff");
+    this.outlinePass.hiddenEdgeColor.set("#ffffff");
     this.effectComposer.addPass(this.outlinePass);
 
     // This corrects the output from the outline pass for srgbe encoding

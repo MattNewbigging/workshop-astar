@@ -12,6 +12,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({ gameState }) => {
       <div className="button" onClick={gameState.generateGrid}>
         Generate Grid
       </div>
+      <div
+        className="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          gameState.startPlacingAgent();
+        }}
+      >
+        Place Agent
+      </div>
     </div>
   );
 };
