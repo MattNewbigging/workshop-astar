@@ -4,8 +4,9 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { RenderPipeline } from "./render-pipeline";
 import { AssetManager } from "./asset-manager";
 import { Agent } from "./agent";
+import { makeAutoObservable, observable } from "mobx";
 
-interface GridCell {
+export interface GridCell {
   posX: number;
   posZ: number;
   obstacle: boolean;
@@ -13,6 +14,8 @@ interface GridCell {
 }
 
 export class GameState {
+  @observable canSetDestination = false;
+
   private renderPipeline: RenderPipeline;
   private clock = new THREE.Clock();
 
@@ -23,15 +26,17 @@ export class GameState {
   private mouseNdc = new THREE.Vector2();
   private raycaster = new THREE.Raycaster();
 
+  private agent: Agent;
+
   private floorMaterial: THREE.MeshLambertMaterial;
   private obstacleMaterial: THREE.MeshLambertMaterial;
   private gridSize = 10;
   private grid: GridCell[][] = [];
   private floorCells: GridCell[] = [];
 
-  private agent: Agent;
-
   constructor(private assetManager: AssetManager) {
+    makeAutoObservable(this);
+
     // Scene
     this.setupCamera();
     this.renderPipeline = new RenderPipeline(this.scene, this.camera);
@@ -76,17 +81,22 @@ export class GameState {
   };
 
   startPlacingAgent = () => {
-    // Clear up previous agent
-
     // Add the agent model to the scene out of view
     this.agent.model.position.set(0, 200, 0);
     this.agent.playAnimation("idle");
     this.scene.add(this.agent.model);
 
-    // Start intersecting the floor
-    window.addEventListener("mousemove", this.onMouseMove);
+    // Highlight floor spaces for agent placement
+    window.addEventListener("mousemove", this.placeAgentMouseMove);
     // Listen for clicks
     window.addEventListener("click", this.placeAgentClick);
+  };
+
+  startSetDestination = () => {
+    // Highlight floor spaces for available destinations
+    window.addEventListener("mousemove", this.setDestinationMouseMove);
+    // Listen for clicks
+    window.addEventListener("click", this.setDestinationClick);
   };
 
   private setupCamera() {
@@ -176,6 +186,7 @@ export class GameState {
 
   private removeAgent() {
     this.scene.remove(this.agent.model);
+    this.canSetDestination = false;
   }
 
   private update = () => {
@@ -190,7 +201,7 @@ export class GameState {
     this.renderPipeline.render(dt);
   };
 
-  private onMouseMove = (e: MouseEvent) => {
+  private placeAgentMouseMove = (e: MouseEvent) => {
     this.mouseNdc.x = (e.clientX / window.innerWidth) * 2 - 1;
     this.mouseNdc.y = -(e.clientY / window.innerHeight) * 2 + 1;
 
@@ -208,6 +219,7 @@ export class GameState {
 
         // Place agent at the center of this grid cell
         this.agent.model.position.set(floorCell.posX, 0, floorCell.posZ);
+        this.agent.currentCell = floorCell;
 
         break;
       }
@@ -215,8 +227,46 @@ export class GameState {
   };
 
   private placeAgentClick = () => {
-    // Stop moving agent with mouse
-    window.removeEventListener("mousemove", this.onMouseMove);
+    // Remove listeners and outlines
+    window.removeEventListener("mousemove", this.placeAgentMouseMove);
+    window.removeEventListener("click", this.placeAgentClick);
+    this.renderPipeline.clearOutlines();
+
+    // Can now set destination for the agent
+    this.canSetDestination = true;
+  };
+
+  private setDestinationMouseMove = (e: MouseEvent) => {
+    this.mouseNdc.x = (e.clientX / window.innerWidth) * 2 - 1;
+    this.mouseNdc.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+    this.raycaster.setFromCamera(this.mouseNdc, this.camera);
+    for (const floorCell of this.floorCells) {
+      // Ignore the floor cell the agent is on
+      const currentCell = this.agent.currentCell;
+      if (currentCell && this.gridCellsAreEqual(currentCell, floorCell)) {
+        continue;
+      }
+
+      const intersections = this.raycaster.intersectObject(
+        floorCell.object,
+        false
+      );
+      if (intersections.length) {
+        this.renderPipeline.clearOutlines();
+        this.renderPipeline.outlineObject(floorCell.object);
+      }
+    }
+  };
+
+  private setDestinationClick = () => {
+    // Remove listeners and outlines
+    window.removeEventListener("mousemove", this.setDestinationMouseMove);
+    window.removeEventListener("click", this.setDestinationClick);
     this.renderPipeline.clearOutlines();
   };
+
+  private gridCellsAreEqual(a: GridCell, b: GridCell) {
+    return a.posX === b.posX && a.posZ === b.posZ;
+  }
 }

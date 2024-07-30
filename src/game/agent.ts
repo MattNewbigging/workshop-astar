@@ -1,8 +1,10 @@
 import * as THREE from "three";
 import { AssetManager } from "./asset-manager";
+import { GridCell } from "./game-state";
 
 export class Agent {
   model: THREE.Object3D;
+  currentCell?: GridCell;
 
   private mixer: THREE.AnimationMixer;
   private animations = new Map<string, THREE.AnimationAction>();
