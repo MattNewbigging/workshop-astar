@@ -1,16 +1,18 @@
 .game-screen {
   padding: 10px;
+  z-index: 20;
 
   display: flex;
   gap: 20px;
 
   .button {
-    border: 1px solid white;
-    border-radius: 4px;
-    padding: 5px;
-    background-color: white;
-    cursor: pointer;
+    //border: 1px solid white;
+    //border-radius: 4px;
+    //padding: 5px;
+    //background-color: white;
+    //cursor: pointer;
     pointer-events: all;
     user-select: none;
+    outline: none;
   }
 }

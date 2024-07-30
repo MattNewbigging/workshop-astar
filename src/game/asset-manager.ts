@@ -57,19 +57,24 @@ export class AssetManager {
       "/textures/PolygonPrototype_Texture_01.png",
       import.meta.url
     ).href;
-    textureLoader.load(dummy, (texture) => this.textures.set("dummy", texture));
+    textureLoader.load(dummy, (texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      this.textures.set("dummy", texture);
+    });
 
     const floorBlack = new URL("/textures/texture_01.png", import.meta.url)
       .href;
     textureLoader.load(floorBlack, (texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace;
       this.textures.set("floor-black", texture);
     });
 
     const obstacleOrange = new URL("/textures/texture_03.png", import.meta.url)
       .href;
-    textureLoader.load(obstacleOrange, (texture) =>
-      this.textures.set("obstacle-orange", texture)
-    );
+    textureLoader.load(obstacleOrange, (texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      this.textures.set("obstacle-orange", texture);
+    });
   }
 
   private loadAnimations(fbxLoader: FBXLoader) {

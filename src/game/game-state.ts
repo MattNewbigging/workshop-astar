@@ -23,8 +23,8 @@ export class GameState {
   private mouseNdc = new THREE.Vector2();
   private raycaster = new THREE.Raycaster();
 
-  private floorMaterial: THREE.MeshPhongMaterial;
-  private obstacleMaterial: THREE.MeshPhongMaterial;
+  private floorMaterial: THREE.MeshLambertMaterial;
+  private obstacleMaterial: THREE.MeshLambertMaterial;
   private gridSize = 10;
   private grid: GridCell[][] = [];
   private floorCells: GridCell[] = [];
@@ -48,7 +48,7 @@ export class GameState {
     this.agent = new Agent(this.assetManager);
 
     // Grid
-    this.floorMaterial = new THREE.MeshPhongMaterial({
+    this.floorMaterial = new THREE.MeshLambertMaterial({
       map: this.assetManager.textures.get("floor-black"),
     });
 
@@ -56,7 +56,7 @@ export class GameState {
     obstacleTexture.wrapS = THREE.RepeatWrapping;
     obstacleTexture.wrapT = THREE.RepeatWrapping;
     obstacleTexture.repeat = new THREE.Vector2(1, 3);
-    this.obstacleMaterial = new THREE.MeshPhongMaterial({
+    this.obstacleMaterial = new THREE.MeshLambertMaterial({
       map: obstacleTexture,
     });
 
@@ -69,6 +69,8 @@ export class GameState {
   }
 
   generateGrid = () => {
+    console.log("generate grid");
+    this.removeAgent();
     this.disposeGrid(this.grid);
     this.buildGrid(this.gridSize);
     this.displayGrid(this.grid);
@@ -171,6 +173,10 @@ export class GameState {
     grid.forEach((row) =>
       row.forEach((cell) => this.scene.remove(cell.object))
     );
+  }
+
+  private removeAgent() {
+    this.scene.remove(this.agent.model);
   }
 
   private update = () => {
