@@ -3,8 +3,7 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { GammaCorrectionShader } from "three/examples/jsm/shaders/GammaCorrectionShader";
 import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
-import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass";
-
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass";
 export class RenderPipeline {
   private effectComposer: EffectComposer;
   private renderPass: RenderPass;
@@ -50,8 +49,7 @@ export class RenderPipeline {
     this.outlinePass.hiddenEdgeColor.set("#ffffff");
     this.effectComposer.addPass(this.outlinePass);
 
-    // This corrects the output from the outline pass for srgbe encoding
-    //this.effectComposer.addPass(new ShaderPass(GammaCorrectionShader));
+    this.effectComposer.addPass(new OutputPass());
   }
 
   get canvas() {

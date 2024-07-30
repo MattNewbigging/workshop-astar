@@ -69,7 +69,6 @@ export class GameState {
   }
 
   generateGrid = () => {
-    console.log("generate grid");
     this.removeAgent();
     this.disposeGrid(this.grid);
     this.buildGrid(this.gridSize);
