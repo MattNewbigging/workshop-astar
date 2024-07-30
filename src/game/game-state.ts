@@ -9,11 +9,7 @@ interface GridCell {
   posX: number;
   posZ: number;
   obstacle: boolean;
-}
-
-interface Grid {
-  cells: GridCell[][];
-  objects: THREE.Object3D[];
+  object: THREE.Object3D;
 }
 
 export class GameState {
@@ -32,7 +28,8 @@ export class GameState {
   private floorMaterial: THREE.MeshPhongMaterial;
   private obstacleMaterial: THREE.MeshPhongMaterial;
 
-  private grid: Grid;
+  private gridSize = 10;
+  private grid: GridCell[][];
 
   constructor(private assetManager: AssetManager) {
     this.setupCamera();
@@ -42,7 +39,7 @@ export class GameState {
 
     this.controls = new OrbitControls(this.camera, this.renderPipeline.canvas);
     this.controls.enableDamping = true;
-    this.controls.target.set(0, 1, 0);
+    this.controls.target.set(this.gridSize / 2, 0, this.gridSize / 2);
 
     this.scene.background = new THREE.Color("#1680AF");
 
@@ -64,7 +61,7 @@ export class GameState {
     });
 
     // Initial grid
-    this.grid = this.buildGrid();
+    this.grid = this.buildGrid(this.gridSize);
     this.displayGrid(this.grid);
 
     window.addEventListener("mousemove", this.onMouseMove);
@@ -76,14 +73,14 @@ export class GameState {
 
   generateGrid = () => {
     this.disposeGrid(this.grid);
-    this.grid = this.buildGrid();
+    this.grid = this.buildGrid(this.gridSize);
     this.displayGrid(this.grid);
   };
 
   private setupCamera() {
     this.camera.fov = 75;
     this.camera.far = 500;
-    this.camera.position.set(15, 10, 15);
+    this.camera.position.set(this.gridSize + 5, 10, this.gridSize + 5);
   }
 
   private setupLights() {
@@ -110,17 +107,7 @@ export class GameState {
     return new AnimatedCharacter(object, mixer, actions);
   }
 
-  private buildGrid(): Grid {
-    const cells = this.buildGridCells();
-    const objects = this.getGridCellObjects(cells);
-
-    return {
-      cells,
-      objects,
-    };
-  }
-
-  private buildGridCells(gridSize = 10) {
+  private buildGrid(gridSize: number): GridCell[][] {
     // Basic grid with unit-sized cells
     const grid: GridCell[][] = [];
 
@@ -129,80 +116,33 @@ export class GameState {
       grid[z] = [];
 
       for (let x = 0; x < gridSize; x++) {
-        // Column cell
+        // Random chance of being an obstacle
         const obstacle = Math.random() > 0.8;
-        grid[z][x] = { posX: x, posZ: z, obstacle };
+
+        // Create the 3d object to represent this cell
+        const height = obstacle ? 3 : 1;
+        const object = new THREE.Mesh(
+          new THREE.BoxGeometry(1, height, 1),
+          obstacle ? this.obstacleMaterial : this.floorMaterial
+        );
+        const y = obstacle ? height / 2 - 1 : -0.5;
+        object.position.set(x, y, z);
+
+        // Add the cell object to the grid
+        grid[z][x] = { posX: x, posZ: z, obstacle, object };
       }
     }
 
     return grid;
   }
 
-  private getGridCellObjects(grid: GridCell[][]) {
-    // Get some boxes representing the grid of floors and obstacles
-    const objects: THREE.Object3D[] = [];
+  private displayGrid(grid: GridCell[][]) {
+    grid.forEach((row) => row.forEach((cell) => this.scene.add(cell.object)));
+  }
 
+  private disposeGrid(grid: GridCell[][]) {
     grid.forEach((row) =>
-      row.forEach((colCell) => {
-        const { posX, posZ, obstacle } = colCell;
-
-        const height = obstacle ? 3 : 1;
-
-        const cube = new THREE.Mesh(
-          new THREE.BoxGeometry(1, height, 1),
-          obstacle ? this.obstacleMaterial : this.floorMaterial
-        );
-
-        const posY = obstacle ? height / 2 - 1 : -0.5;
-        cube.position.set(posX, posY, posZ);
-
-        objects.push(cube);
-      })
-    );
-
-    return objects;
-  }
-
-  private displayGrid(grid: Grid) {
-    grid.objects.forEach((object) => this.scene.add(object));
-  }
-
-  private disposeGrid(grid: Grid) {
-    grid.objects.forEach((object) => this.scene.remove(object));
-  }
-
-  private setupGrid() {
-    // Materials
-    const cubeMat = new THREE.MeshPhongMaterial({
-      map: this.assetManager.textures.get("floor-black"),
-    });
-
-    const obstacleTexture = this.assetManager.textures.get("obstacle-orange");
-    obstacleTexture.wrapS = THREE.RepeatWrapping;
-    obstacleTexture.wrapT = THREE.RepeatWrapping;
-    obstacleTexture.repeat = new THREE.Vector2(1, 3);
-    const obstacleMat = new THREE.MeshPhongMaterial({
-      map: obstacleTexture,
-    });
-
-    const grid = buildGrid();
-
-    grid.forEach((row) =>
-      row.forEach((colCell) => {
-        const { posX, posZ, obstacle } = colCell;
-
-        const height = obstacle ? 3 : 1;
-
-        const cube = new THREE.Mesh(
-          new THREE.BoxGeometry(1, height, 1),
-          obstacle ? obstacleMat : cubeMat
-        );
-
-        const posY = obstacle ? height / 2 - 1 : -0.5;
-        cube.position.set(posX, posY, posZ);
-
-        this.scene.add(cube);
-      })
+      row.forEach((cell) => this.scene.remove(cell.object))
     );
   }
 
