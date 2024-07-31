@@ -90,6 +90,8 @@ export class GameState {
   };
 
   startPlacingAgent = () => {
+    this.removeAgent();
+
     // Add the agent model to the scene out of view
     this.agent.model.position.set(0, 200, 0);
     this.agent.playAnimation("idle");
@@ -200,6 +202,10 @@ export class GameState {
   }
 
   private removeAgent() {
+    this.agent.clearPath();
+    this.floorCells.forEach((cell) =>
+      this.changeFloorMaterial(cell, this.floorBlackMaterial)
+    );
     this.scene.remove(this.agent.model);
     this.canSetDestination = false;
   }

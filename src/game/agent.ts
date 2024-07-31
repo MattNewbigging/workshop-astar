@@ -47,6 +47,13 @@ export class Agent {
     this.setNextTargetCell();
   }
 
+  clearPath() {
+    this.path = [];
+    this.targetCell = undefined;
+    this.currentCell = undefined;
+    this.destinationCell = undefined;
+  }
+
   playAnimation(name: string) {
     // Find the new action with the given name
     const nextAction = this.animations.get(name);
@@ -97,10 +104,12 @@ export class Agent {
     // Keep moving towards the target cell
     const cellPosition = this.targetCell.position.clone();
     this.direction = cellPosition.sub(this.model.position).normalize();
-    const moveStep = this.direction.clone().multiplyScalar(dt * 2);
-    this.model.position.add(moveStep);
 
-    // Rotate to face target...
+    const moveStep = this.direction.clone().multiplyScalar(dt * 2);
+    const nextPos = this.model.position.clone().add(moveStep);
+
+    this.model.lookAt(nextPos);
+    this.model.position.copy(nextPos);
   }
 
   private hasReachedCell(cell: GridCell) {
