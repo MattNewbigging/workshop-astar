@@ -119,7 +119,7 @@ export class AStar {
       costFromStart: 0,
       costToEnd: 0,
       costTotal: 0,
-    }));
+    })) as PathNode[];
   }
 
   calculateCosts(current: PathNode, previous: PathNode, end: PathNode) {
