@@ -296,15 +296,10 @@ export class GameState {
     const fromCell = this.agent.currentCell;
     const toCell = this.agent.destinationCell;
 
-    console.log("fromCell", fromCell?.position);
-    console.log("toCell", toCell?.position);
-
     if (fromCell && toCell) {
       const aStar = new AStar();
       const path = aStar.getPath(fromCell, toCell, this.grid);
       if (path) {
-        console.log("first path node", path[0].position);
-        console.log("end path node", path[path.length - 1].position);
         // Change the path floor tiles to green
         path.forEach((cell) => {
           this.changeFloorMaterial(cell, this.floorGreenMaterial);
